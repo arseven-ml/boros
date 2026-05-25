@@ -46,7 +46,6 @@
   .panel h3{font-size:.9rem;margin-bottom:3px;font-weight:600}
   .cap{font-size:.76rem;color:var(--secondary);margin-bottom:10px}
 
-  /* controls */
   .ctrl{margin-bottom:16px}
   .ctrl-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:3px}
   .ctrl-head label{font-weight:600}
@@ -62,7 +61,23 @@
     cursor:pointer;font-weight:600;font-family:inherit}
   button#reset:hover{background:var(--surface-water)}
 
-  /* asset picker */
+  .seg{display:flex;gap:5px}
+  .seg button{flex:1;font-family:inherit;font-size:.8rem;padding:7px 4px;border-radius:7px;
+    cursor:pointer;background:var(--surface-water);border:1px solid var(--water-800);
+    color:var(--secondary);font-weight:600}
+  .seg button:hover{border-color:var(--water-500)}
+  .seg button.active{background:var(--surface-info);border-color:var(--info);color:var(--primary)}
+
+  .slipbox{padding:10px 12px;background:var(--surface-water-faint);
+    border:1px solid var(--water-850);border-radius:9px}
+  .slipbox .big{font-size:1.02rem;font-weight:800;font-variant-numeric:tabular-nums}
+  .slipbox .line{font-size:.72rem;color:var(--secondary);margin-top:6px;line-height:1.5}
+  .slipbox .line b{color:var(--primary);font-variant-numeric:tabular-nums}
+  .depthbar{height:8px;border-radius:5px;margin-top:8px;position:relative;
+    background:var(--water-850);overflow:hidden}
+  .depthbar i{position:absolute;top:0;bottom:0;left:0;display:block}
+  .depthbar .mk{position:absolute;top:-3px;width:2px;height:14px;background:var(--primary)}
+
   .picker{margin:-4px 0 16px;padding:11px 12px;background:var(--surface-water-faint);
     border:1px solid var(--water-850);border-radius:9px}
   .picker-head{font-size:.74rem;color:var(--secondary);font-weight:600;margin-bottom:8px;
@@ -78,7 +93,6 @@
   .chip.active{background:var(--surface-info);border-color:var(--info);color:var(--primary)}
   .picker-detail{font-size:.71rem;color:var(--secondary);margin-top:9px;line-height:1.5}
 
-  /* kpis */
   .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
   @media(max-width:620px){.kpis{grid-template-columns:repeat(2,1fr)}}
   .kpi{background:var(--surface-water-faint);border:1px solid var(--water-850);
@@ -87,7 +101,6 @@
   .kpi .num{font-size:1.3rem;font-weight:800;font-variant-numeric:tabular-nums;margin-top:3px}
   .kpi .sub{font-size:.72rem;color:var(--water-500);margin-top:1px}
 
-  /* position summary */
   .pos{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--water-850);
     border:1px solid var(--water-850);border-radius:10px;overflow:hidden;margin-bottom:16px}
   @media(max-width:620px){.pos{grid-template-columns:repeat(2,1fr)}}
@@ -103,7 +116,8 @@
   canvas{width:100%;display:block}
   .selrow{display:flex;align-items:center;gap:8px;margin:8px 0}
   select{padding:5px 8px;border:1px solid var(--water-700);border-radius:7px;
-    font-size:.85rem;background:var(--surface-water-faint);color:var(--primary);font-family:inherit}
+    font-size:.85rem;background:var(--surface-water-opaque);color:var(--primary);font-family:inherit}
+  select option{background:#1C212D;color:#FFFFFF}
   footer{padding:0 24px 32px;color:var(--secondary);max-width:1120px}
   footer details{border:1px solid var(--water-850);background:var(--surface-water-opaque);
     border-radius:12px;padding:12px 16px}
@@ -118,20 +132,24 @@
   <h1>Boros Funding-Rate Arb — Return Dashboard</h1>
   <p>A delta-neutral trade: long perp on one exchange, short perp on another, capturing the funding-rate
   spread — with both legs converted to a fixed rate via two Boros swaps, financed by a Prime Broker.
-  Drag the moving parts to see how each one hits the bottom line. Defaults match the v3 model.</p>
+  Drag the moving parts to see how each one hits the bottom line.</p>
 </header>
 
 <div class="grid">
 
-  <!-- ============ CONTROLS ============ -->
   <aside class="panel controls">
     <h2>Moving parts</h2>
 
     <div class="ctrl">
       <div class="ctrl-head"><label>Investment size — your equity</label><span class="val" id="equityV"></span></div>
       <div class="ctrl-sub">Capital you commit. Leverage scales this into the position.</div>
-      <input type="range" id="equity" min="100000" max="10000000" step="100000" value="1000000">
-      <div class="ctrl-range"><span>$100k</span><span>$10M</span></div>
+      <input type="hidden" id="equity" value="1000000">
+      <div class="seg" id="equitySeg">
+        <button type="button" data-v="100000">$100k</button>
+        <button type="button" data-v="500000">$500k</button>
+        <button type="button" data-v="1000000">$1M</button>
+        <button type="button" data-v="5000000">$5M</button>
+      </div>
     </div>
 
     <div class="ctrl">
@@ -157,9 +175,9 @@
 
     <div class="ctrl">
       <div class="ctrl-head"><label>Boros slippage</label><span class="val" id="slipV"></span></div>
-      <div class="ctrl-sub">Rate worsening per $1M filled, per swap leg.</div>
-      <input type="range" id="slip" min="0" max="15" step="0.5" value="1">
-      <div class="ctrl-range"><span>0 bps</span><span>15 bps</span></div>
+      <div class="ctrl-sub">Computed from the live order book and your fill size — adjust it by changing
+        Investment size, leverage, or the market picked below.</div>
+      <div class="slipbox" id="slipBox"></div>
     </div>
 
     <div class="ctrl">
@@ -170,7 +188,7 @@
     </div>
 
     <div class="picker">
-      <div class="picker-head"><span>Or pick a live Boros market</span><span id="pkAsOf">implied rates · 25 May 2026</span></div>
+      <div class="picker-head"><span>Or pick a live Boros market</span><span id="pkAsOf">implied rates + book · 25 May 2026</span></div>
       <div class="chips" id="chips"></div>
       <div class="picker-detail" id="pkDetail"></div>
     </div>
@@ -215,10 +233,9 @@
       </div>
     </details>
 
-    <button id="reset">Reset to v3 defaults</button>
+    <button id="reset">Reset to defaults</button>
   </aside>
 
-  <!-- ============ RESULTS ============ -->
   <main class="panel results">
 
     <div class="kpis">
@@ -250,7 +267,6 @@
         <select id="sweep">
           <option value="spread">Perp funding spread</option>
           <option value="pbRate">Prime Broker interest rate</option>
-          <option value="slip">Boros slippage</option>
           <option value="pbLev">Prime Broker leverage</option>
           <option value="exLev">Exchange leverage</option>
           <option value="equity">Investment size</option>
@@ -265,58 +281,64 @@
 <footer>
   <details>
     <summary>How it's calculated</summary>
-    <p style="margin:10px 0 4px"><b>Position chain (capital → position):</b><br>
-    <code>margin = equity × Prime Broker leverage</code> &nbsp;·&nbsp;
-    <code>Prime Broker loan = margin − equity</code> &nbsp;·&nbsp;
-    <code>total notional = margin × exchange leverage</code> &nbsp;·&nbsp;
+    <p style="margin:10px 0 4px"><b>Position chain:</b>
+    <code>margin = equity × Prime Broker leverage</code> ·
+    <code>Prime Broker loan = margin − equity</code> ·
+    <code>total notional = margin × exchange leverage</code> ·
     <code>per-leg = notional / 2</code></p>
-    <p style="margin:4px 0"><b>Income:</b>
-    <code>gross = spread × notional × days/365</code>;
-    <code>slippage = 2 × (bps/10000) × (per-leg/$1M) × notional × days/365</code></p>
+    <p style="margin:4px 0"><b>Income &amp; slippage:</b>
+    <code>gross = spread × notional × days/365</code>.
+    Slippage is not a guessed input — each leg's per-leg fill is run against that market's real
+    Boros order book (24h-average depth, 25 May 2026). The average rate paid climbs as the fill eats
+    through the 30 bps and 120 bps depth bands; <code>slipCost = leg1 + leg2</code>.</p>
     <p style="margin:4px 0"><b>Costs:</b> Prime Broker interest <code>= rate × loan × days/365</code>;
     exchange fees <code>= 4 × taker × per-leg</code>;
     Boros swap <code>= 2 × tier × per-leg × days/365</code>;
     Boros OI <code>= 2 × OIfee × per-leg × days/365</code>;
-    Boros margin <code>= 2 × IM × per-leg × days/365</code>, opp. cost <code>= margin × Prime Broker rate × days/365</code></p>
+    Boros margin <code>= 2 × IM × per-leg × days/365</code>, opp. cost <code>= margin × rate × days/365</code></p>
     <p style="margin:4px 0"><b>Return:</b> <code>net = income − all costs</code>;
     <code>capital = equity + Boros margin</code>;
-    <code>ROE = net × 365/days / capital</code>;
-    waterfall <code>ROI % = component$ / initial equity</code> (period figure).</p>
-    <p style="margin:8px 0 0" class="warn">Note: the slippage formula is reproduced exactly from the v3 sheet
-    (it applies a 2-leg factor to the full 2-leg notional). If that is a double-count, true slippage cost is
-    about half — ask and this can be switched.</p>
+    <code>ROE = net × 365/days / capital</code>.</p>
+    <p style="margin:8px 0 0" class="warn">Order-book depth is a 25 May 2026 snapshot — real liquidity
+    moves intraday. The book model is piecewise-linear through the 30 bps / 120 bps depth bands.</p>
   </details>
 </footer>
 
 <script>
 "use strict";
 
-/* ---------- defaults (v3 model) ---------- */
-var DEFAULTS = {equity:1000000,pbLev:4,exLev:5,pbRate:6,slip:1,spread:2.4,
+var DEFAULTS = {equity:1000000,pbLev:4,exLev:5,pbRate:6,spread:2.4,
   dur:90,taker:3.75,swap:0.05,oi:0.1,im:5,plat:0};
 var IDS = Object.keys(DEFAULTS);
 
-/* ---------- live Boros markets (implied rates, 25 May 2026) ----------
-   spread = cross-venue gap in Boros implied APR (mark_apr) for the same asset.
-   Source: market_metrics_all_in_one_daily, latest snapshot. */
+/* live Boros markets: implied rates + per-side order-book depth (USD).
+   d30 = liquidity within 30bps of mid, d120 = within 120bps. 24h avg, 25 May 2026. */
 var BOROS_MKTS = [
-  {name:'Oil',   vn:'HL–BN', mat:'18 Jun', v1:'Hyperliquid −41.0%', v2:'Binance −33.2%', spread:7.8},
-  {name:'Silver',vn:'HL–BN', mat:'29 May', v1:'Hyperliquid 12.98%', v2:'Binance 8.38%',  spread:4.6},
-  {name:'HYPE',  vn:'HL–BY', mat:'29 May', v1:'Hyperliquid 6.57%',  v2:'Bybit 3.00%',    spread:3.6},
-  {name:'Gold',  vn:'HL–BN', mat:'29 May', v1:'Hyperliquid 5.89%',  v2:'Binance 2.58%',  spread:3.3},
-  {name:'ETH',   vn:'BN–HL', mat:'29 May', v1:'Binance 4.96%',      v2:'Hyperliquid 2.06%', spread:2.9},
-  {name:'BTC',   vn:'BN–HL', mat:'29 May', v1:'Binance 3.70%',      v2:'Hyperliquid 1.18%', spread:2.5},
-  {name:'SOL',   vn:'HL–LT', mat:'29 May', v1:'Hyperliquid −1.71%', v2:'Lighter −0.94%', spread:0.8},
-  {name:'XRP',   vn:'HL–BN', mat:'29 May', v1:'Hyperliquid 0.68%',  v2:'Binance 0.25%',  spread:0.4}
+  {name:'Oil',   vn:'HL-BN', mat:'18 Jun', v1:'Hyperliquid -41.0%', v2:'Binance -33.2%', spread:7.8,
+    b1:{d30:0,d120:9552},          b2:{d30:0,d120:46}},
+  {name:'Silver',vn:'HL-BN', mat:'29 May', v1:'Hyperliquid 12.98%', v2:'Binance 8.38%',  spread:4.6,
+    b1:{d30:106,d120:6288},        b2:{d30:0,d120:40999}},
+  {name:'HYPE',  vn:'HL-BY', mat:'29 May', v1:'Hyperliquid 6.57%',  v2:'Bybit 3.00%',    spread:3.6,
+    b1:{d30:31362,d120:145881},    b2:{d30:83845,d120:138559}},
+  {name:'Gold',  vn:'HL-BN', mat:'29 May', v1:'Hyperliquid 5.89%',  v2:'Binance 2.58%',  spread:3.3,
+    b1:{d30:9137,d120:451418},     b2:{d30:118245,d120:708529}},
+  {name:'ETH',   vn:'BN-HL', mat:'29 May', v1:'Binance 4.96%',      v2:'Hyperliquid 2.06%', spread:2.9,
+    b1:{d30:590463,d120:3297099},  b2:{d30:846564,d120:4581347}},
+  {name:'BTC',   vn:'BN-HL', mat:'29 May', v1:'Binance 3.70%',      v2:'Hyperliquid 1.18%', spread:2.5,
+    b1:{d30:13155971,d120:15903332}, b2:{d30:1194064,d120:9847987}},
+  {name:'SOL',   vn:'HL-LT', mat:'29 May', v1:'Hyperliquid -1.71%', v2:'Lighter -0.94%', spread:0.8,
+    b1:{d30:152861,d120:877387},   b2:{d30:387085,d120:889589}},
+  {name:'XRP',   vn:'HL-BN', mat:'29 May', v1:'Hyperliquid 0.68%',  v2:'Binance 0.25%',  spread:0.4,
+    b1:{d30:21233,d120:153714},    b2:{d30:8756,d120:50156}}
 ];
-var PK_DEFAULT = 'Spread set manually. Tap an asset to load its live cross-venue ' +
-  'implied-rate spread.  BN Binance · HL Hyperliquid · OK OKX · BY Bybit · LT Lighter.';
+var REF_IDX = 4;
+var pickedIdx = null;
+var PK_DEFAULT = 'Spread set manually. Slippage uses the ETH BN-HL book as reference. Tap an asset to ' +
+  'load its live spread AND its order-book depth.  BN Binance | HL Hyperliquid | BY Bybit | LT Lighter.';
 
-/* ---------- Boros palette ---------- */
 var C = {ink:'#FFFFFF',sub:'#9DAFCD',faint:'#5B749D',grid:'#1A2537',
   line:'#374B6D',grass:'#1BE3C2',guava:'#FF9393',info:'#6079FF',warn:'#EFB54B'};
 
-/* ---------- helpers ---------- */
 function $(id){return document.getElementById(id);}
 function money(v){var s=v<0?'-':'';return s+'$'+Math.abs(Math.round(v)).toLocaleString('en-US');}
 function moneyShort(v){
@@ -329,8 +351,30 @@ function moneyShort(v){
 function pct(v,d){return (v*100).toFixed(d===undefined?1:d)+'%';}
 function signPct(v,d){var p=v*100;return (p>=0?'+':'')+p.toFixed(d===undefined?1:d)+'%';}
 function roeColor(r){return r>=0.15?C.grass:(r>=0?C.warn:C.guava);}
+function slipColor(b){return b<10?C.grass:(b<50?C.warn:C.guava);}
 
-/* ---------- the model ---------- */
+/* order-book slippage: average rate (bps) to fill fillUsd one side of a book.
+   piecewise-linear cumulative book: 0$@0bps -> d30$@30bps -> d120$@120bps -> extrapolated. */
+function bookSlipBps(fillUsd,book){
+  var F=fillUsd; if(F<=0) return 0;
+  var d30=book.d30, d120=book.d120;
+  var w=Math.max(d120-d30,1);
+  var area=0;
+  if(d30>0){
+    var a=Math.min(F,d30);
+    area+=15*a*a/d30;
+  }
+  if(F>d30){
+    var b=Math.min(F,d120), len=b-d30;
+    area+=30*len + 45*len*len/w;
+    if(F>d120){
+      var c=F-d120, slope=90/w;
+      area+=120*c + slope*c*c/2;
+    }
+  }
+  return Math.min(area/F, 3000);
+}
+
 function compute(i){
   var yr=i.dur/365;
   var margin=i.equity*i.pbLev;
@@ -340,8 +384,10 @@ function compute(i){
   var effLev=i.pbLev*i.exLev;
 
   var grossIncome=(i.spread/100)*notional*yr;
-  var slipAnn=2*(i.slip/10000)*(perLeg/1e6);          // v3 formula, as-is
-  var slipCost=slipAnn*notional*yr;
+  var slipBps1=bookSlipBps(perLeg,i.b1);
+  var slipBps2=bookSlipBps(perLeg,i.b2);
+  var slipEffBps=(slipBps1+slipBps2)/2;
+  var slipCost=((slipBps1+slipBps2)/10000)*perLeg*yr;
   var netFixed=grossIncome-slipCost;
 
   var pbCost=(i.pbRate/100)*pbLoan*yr;
@@ -359,22 +405,28 @@ function compute(i){
 
   return {equity:i.equity,yr:yr,margin:margin,pbLoan:pbLoan,notional:notional,perLeg:perLeg,
     effLev:effLev,grossIncome:grossIncome,slipCost:slipCost,netFixed:netFixed,
+    slipBps1:slipBps1,slipBps2:slipBps2,slipEffBps:slipEffBps,
     pbCost:pbCost,platCost:platCost,exFees:exFees,swapFees:swapFees,oiCost:oiCost,
     borosMargin:borosMargin,marginOpp:marginOpp,net:net,
     totalCapital:totalCapital,roeCap:roeCap,roeEq:roeEq};
 }
 
+function activeMkt(){ return BOROS_MKTS[pickedIdx!=null?pickedIdx:REF_IDX]; }
+
 function readInputs(){
-  var o={};IDS.forEach(function(k){o[k]=parseFloat($(k).value);});return o;
+  var o={};IDS.forEach(function(k){o[k]=parseFloat($(k).value);});
+  var m=activeMkt(); o.b1=m.b1; o.b2=m.b2;
+  return o;
 }
 
-/* ---------- slider value labels ---------- */
 function syncLabels(i){
   $('equityV').textContent=moneyShort(i.equity);
+  Array.prototype.forEach.call(document.querySelectorAll('#equitySeg button'),function(b){
+    b.classList.toggle('active',parseFloat(b.dataset.v)===i.equity);
+  });
   $('pbLevV').textContent=i.pbLev.toFixed(2)+'x';
   $('exLevV').textContent=i.exLev.toFixed(1)+'x';
   $('pbRateV').textContent=i.pbRate.toFixed(2)+'%';
-  $('slipV').textContent=i.slip.toFixed(1)+' bps';
   $('spreadV').textContent=i.spread.toFixed(2)+'%';
   $('durV').textContent=i.dur.toFixed(0)+' days';
   $('takerV').textContent=i.taker.toFixed(2)+' bps';
@@ -384,7 +436,33 @@ function syncLabels(i){
   $('platV').textContent=i.plat.toFixed(1)+'%';
 }
 
-/* ---------- KPI + summary ---------- */
+function renderSlip(r){
+  var m=activeMkt(), picked=(pickedIdx!=null);
+  var col=slipColor(r.slipEffBps);
+  $('slipV').textContent='~'+r.slipEffBps.toFixed(1)+' bps';
+  $('slipV').style.color=col;
+  var codes=m.vn.split('-');
+
+  var html='<div class="big" style="color:'+col+'">~'+r.slipEffBps.toFixed(0)+
+    ' bps effective  ·  '+money(r.slipCost)+' cost</div>';
+  html+='<div class="line">Filling <b>'+money(r.perLeg)+'</b> per leg into the <b>'+m.name+' '+m.vn+
+    '</b> book'+(picked?'':' <span style="color:var(--water-500)">(reference)</span>')+'.</div>';
+  html+='<div class="line">'+codes[0]+' leg ~<b>'+r.slipBps1.toFixed(0)+' bps</b> · '+
+    codes[1]+' leg ~<b>'+r.slipBps2.toFixed(0)+' bps</b>. Book depth/side within 120 bps: <b>'+
+    moneyShort(m.b1.d120)+'</b> / <b>'+moneyShort(m.b2.d120)+'</b>.</div>';
+
+  var thin=Math.min(m.b1.d120,m.b2.d120);
+  var scale=Math.max(thin*1.4, r.perLeg, 1);
+  var fillPct=Math.min(100,100*r.perLeg/scale);
+  var depthPct=Math.min(100,100*thin/scale);
+  html+='<div class="depthbar"><i style="width:'+depthPct+'%;background:var(--surface-info)"></i>'+
+    '<span class="mk" style="left:'+fillPct+'%"></span></div>';
+  html+='<div class="line" style="margin-top:4px;color:var(--water-500)">'+
+    'Shaded = liquidity within 120 bps on the thinner leg ('+moneyShort(thin)+'). '+
+    'Marker = your '+money(r.perLeg)+' per-leg fill.</div>';
+  $('slipBox').innerHTML=html;
+}
+
 function renderStats(i,r){
   $('kNet').textContent=money(r.net);
   $('kNet').style.color=r.net>=0?C.grass:C.guava;
@@ -414,7 +492,6 @@ function renderStats(i,r){
   }).join('');
 }
 
-/* ---------- hi-dpi canvas ---------- */
 function setupCanvas(cv,cssH){
   var dpr=window.devicePixelRatio||1;
   var w=cv.clientWidth||cv.parentNode.clientWidth;
@@ -425,7 +502,6 @@ function setupCanvas(cv,cssH){
   return {ctx:ctx,w:w,h:cssH};
 }
 
-/* ---------- waterfall ---------- */
 function drawWaterfall(r){
   var cv=$('wf');var s=setupCanvas(cv,320);var ctx=s.ctx,W=s.w,H=s.h;
   ctx.clearRect(0,0,W,H);
@@ -459,7 +535,6 @@ function drawWaterfall(r){
   var n=steps.length,gap=8;
   var bw=(W-padL-padR-gap*(n-1))/n;
 
-  // zero line
   ctx.strokeStyle=C.line;ctx.lineWidth=1;
   ctx.beginPath();ctx.moveTo(padL,zeroY);ctx.lineTo(W-padR,zeroY);ctx.stroke();
 
@@ -476,14 +551,12 @@ function drawWaterfall(r){
     ctx.fillRect(x,yTop,bw,h);
     ctx.globalAlpha=1;
 
-    // connector to next bar
     if(!st.final && k<n-1){
       ctx.strokeStyle=C.faint;ctx.setLineDash([3,2]);
       ctx.beginPath();ctx.moveTo(x,Y(st.y1));ctx.lineTo(x+bw+gap,Y(st.y1));ctx.stroke();
       ctx.setLineDash([]);
     }
 
-    // value labels: $ then ROI%
     ctx.fillStyle=C.ink;
     ctx.font='700 10px Inter,sans-serif';
     ctx.fillText(moneyShort(st.v),x+bw/2,yTop-16);
@@ -491,26 +564,22 @@ function drawWaterfall(r){
     ctx.font='600 9.5px Inter,sans-serif';
     ctx.fillText(signPct(st.v/eq),x+bw/2,yTop-5);
 
-    // category label (two lines)
     ctx.fillStyle=C.sub;
     ctx.font='9px Inter,sans-serif';
     ctx.fillText(st.l[0],x+bw/2,H-padB+13);
     ctx.fillText(st.l[1],x+bw/2,H-padB+24);
   });
 
-  // axis caption
   ctx.fillStyle=C.faint;ctx.font='9px Inter,sans-serif';ctx.textAlign='left';
   ctx.fillText('$ = period P&L   ·   % = return on initial equity ('+money(eq)+')',padL,H-12);
 }
 
-/* ---------- sensitivity ---------- */
 var SWEEP={
   spread:{lo:0,hi:8,label:'Perp funding spread',fmt:function(v){return v.toFixed(1)+'%';}},
   pbRate:{lo:0,hi:15,label:'Prime Broker interest rate',fmt:function(v){return v.toFixed(0)+'%';}},
-  slip:{lo:0,hi:15,label:'Boros slippage (bps)',fmt:function(v){return v.toFixed(0);}},
   pbLev:{lo:1,hi:5,label:'Prime Broker leverage',fmt:function(v){return v.toFixed(1)+'x';}},
   exLev:{lo:1,hi:20,label:'Exchange leverage',fmt:function(v){return v.toFixed(0)+'x';}},
-  equity:{lo:100000,hi:10000000,label:'Investment size',fmt:function(v){return moneyShort(v);}}
+  equity:{lo:100000,hi:5000000,label:'Investment size',fmt:function(v){return moneyShort(v);}}
 };
 
 function drawSensitivity(baseInputs){
@@ -522,6 +591,7 @@ function drawSensitivity(baseInputs){
   for(var k=0;k<=N;k++){
     var xv=cfg.lo+(cfg.hi-cfg.lo)*k/N;
     var inp={};IDS.forEach(function(p){inp[p]=baseInputs[p];});
+    inp.b1=baseInputs.b1;inp.b2=baseInputs.b2;
     inp[key]=xv;
     xs.push(xv);ys.push(compute(inp).roeCap);
   }
@@ -531,7 +601,7 @@ function drawSensitivity(baseInputs){
 
   var yMax=0.05,yMin=-0.05;
   ys.forEach(function(v){if(isFinite(v)){yMax=Math.max(yMax,v);yMin=Math.min(yMin,v);}});
-  yMax=Math.min(yMax,3);yMin=Math.max(yMin,-2);
+  yMax=Math.min(yMax,3);yMin=Math.max(yMin,-3);
   var pad=(yMax-yMin)*0.08;yMax+=pad;yMin-=pad;
 
   function X(v){return padL+plotW*(v-cfg.lo)/(cfg.hi-cfg.lo);}
@@ -547,11 +617,9 @@ function drawSensitivity(baseInputs){
     ctx.fillStyle=C.sub;
     ctx.fillText((yv*100).toFixed(0)+'%',padL-6,yy);
   }
-  // zero line
   ctx.strokeStyle=C.line;ctx.lineWidth=1.3;
   ctx.beginPath();ctx.moveTo(padL,Y(0));ctx.lineTo(W-padR,Y(0));ctx.stroke();
 
-  // x labels
   ctx.textAlign='center';ctx.textBaseline='top';
   for(var xt=0;xt<=4;xt++){
     var xv2=cfg.lo+(cfg.hi-cfg.lo)*xt/4;
@@ -561,7 +629,6 @@ function drawSensitivity(baseInputs){
   ctx.fillStyle=C.ink;
   ctx.fillText(cfg.label,padL+plotW/2,H-padB+24);
 
-  // ROE curve
   ctx.strokeStyle=C.info;ctx.lineWidth=2.4;ctx.beginPath();
   for(var m=0;m<xs.length;m++){
     var px=X(xs[m]),py=Y(Math.max(yMin,Math.min(yMax,ys[m])));
@@ -569,7 +636,6 @@ function drawSensitivity(baseInputs){
   }
   ctx.stroke();
 
-  // current marker
   var cv0=baseInputs[key];
   if(cv0>=cfg.lo&&cv0<=cfg.hi){
     var curRoe=compute(baseInputs).roeCap;
@@ -580,13 +646,12 @@ function drawSensitivity(baseInputs){
     ctx.fillStyle=C.warn;
     ctx.beginPath();ctx.arc(cx,cy,4.5,0,7);ctx.fill();
     ctx.fillStyle=C.ink;ctx.textBaseline='bottom';
-    var lab='now: '+cfg.fmt(cv0)+' → '+pct(curRoe);
+    var lab='now: '+cfg.fmt(cv0)+' -> '+pct(curRoe);
     var tx=cx+8;ctx.textAlign=(tx>W-120)?'right':'left';
     ctx.fillText(lab,(tx>W-120)?cx-8:tx,cy-8);
   }
 }
 
-/* ---------- asset picker ---------- */
 function buildPicker(){
   $('chips').innerHTML=BOROS_MKTS.map(function(m,idx){
     return '<button type="button" class="chip" data-i="'+idx+'">'+
@@ -599,35 +664,40 @@ function buildPicker(){
 }
 function selectMarket(idx){
   var m=BOROS_MKTS[idx];
+  pickedIdx=idx;
   $('spread').value=m.spread;
   Array.prototype.forEach.call(document.querySelectorAll('.chip'),function(b){
     b.classList.toggle('active',parseInt(b.dataset.i,10)===idx);
   });
   $('pkDetail').innerHTML='<b style="color:var(--primary)">'+m.name+'</b> · '+m.mat+
-    ' maturity — '+m.v1+' vs '+m.v2+' → <b style="color:var(--grass)">'+
-    m.spread.toFixed(1)+'% spread</b> loaded. Set Duration to match the maturity.';
+    ' maturity - '+m.v1+' vs '+m.v2+' -> <b style="color:var(--grass)">'+
+    m.spread.toFixed(1)+'% spread</b>. Slippage now uses this market book. '+
+    'Set Duration to match the maturity.';
   render();
 }
 function clearPicker(){
+  pickedIdx=null;
   Array.prototype.forEach.call(document.querySelectorAll('.chip'),function(b){
     b.classList.remove('active');
   });
   $('pkDetail').textContent=PK_DEFAULT;
 }
 
-/* ---------- main render ---------- */
 function render(){
   var i=readInputs();
   var r=compute(i);
   syncLabels(i);
+  renderSlip(r);
   renderStats(i,r);
   drawWaterfall(r);
   drawSensitivity(i);
 }
 
-/* ---------- wiring ---------- */
+$('spread').addEventListener('input',clearPicker);
 IDS.forEach(function(k){$(k).addEventListener('input',render);});
-$('spread').addEventListener('input',clearPicker);   // manual drag drops the picked market
+Array.prototype.forEach.call(document.querySelectorAll('#equitySeg button'),function(b){
+  b.addEventListener('click',function(){$('equity').value=b.dataset.v;render();});
+});
 $('sweep').addEventListener('change',render);
 $('reset').addEventListener('click',function(){
   IDS.forEach(function(k){$(k).value=DEFAULTS[k];});
