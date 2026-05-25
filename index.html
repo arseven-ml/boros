@@ -198,8 +198,13 @@
 
       <div class="ctrl">
         <div class="ctrl-head"><label>Duration</label><span class="val" id="durV"></span></div>
-        <input type="range" id="dur" min="7" max="365" step="1" value="90">
-        <div class="ctrl-range"><span>7d</span><span>365d</span></div>
+        <input type="hidden" id="dur" value="90">
+        <div class="seg" id="durSeg">
+          <button type="button" data-v="30">30d</button>
+          <button type="button" data-v="60">60d</button>
+          <button type="button" data-v="90">90d</button>
+          <button type="button" data-v="180">180d</button>
+        </div>
       </div>
 
       <div class="ctrl">
@@ -429,6 +434,9 @@ function syncLabels(i){
   $('pbRateV').textContent=i.pbRate.toFixed(2)+'%';
   $('spreadV').textContent=i.spread.toFixed(2)+'%';
   $('durV').textContent=i.dur.toFixed(0)+' days';
+  Array.prototype.forEach.call(document.querySelectorAll('#durSeg button'),function(b){
+    b.classList.toggle('active',parseFloat(b.dataset.v)===i.dur);
+  });
   $('takerV').textContent=i.taker.toFixed(2)+' bps';
   $('swapV').textContent=i.swap.toFixed(2)+'%';
   $('oiV').textContent=i.oi.toFixed(2)+'%';
@@ -693,10 +701,12 @@ function render(){
   drawSensitivity(i);
 }
 
-$('spread').addEventListener('input',clearPicker);
 IDS.forEach(function(k){$(k).addEventListener('input',render);});
 Array.prototype.forEach.call(document.querySelectorAll('#equitySeg button'),function(b){
   b.addEventListener('click',function(){$('equity').value=b.dataset.v;render();});
+});
+Array.prototype.forEach.call(document.querySelectorAll('#durSeg button'),function(b){
+  b.addEventListener('click',function(){$('dur').value=b.dataset.v;render();});
 });
 $('sweep').addEventListener('change',render);
 $('reset').addEventListener('click',function(){
